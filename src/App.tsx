@@ -39,6 +39,47 @@ type RuneData = {
   supply: string;
 }
 
+// Define the API response types to match the actual structure
+type RuneEtching = {
+  divisibility?: number;
+  premine?: string;
+  amount?: string;
+  cap?: string;
+  runeId: {
+    block: number;
+    tx: number;
+  };
+  runeName: string;
+  runeTicker: string;
+  runeNumber: number;
+  symbol: string;
+  txid: string;
+  startBlock?: number;
+  endBlock?: number;
+};
+
+type RuneApiItem = {
+  rune: string;
+  etching: RuneEtching;
+  vol: number;
+  totalVol: number;
+  totalTxns: number;
+  unitPriceSats: number;
+  formattedUnitPriceSats: string;
+  txnCount: number;
+  imageURI?: string;
+  unitPriceChange: number;
+  holderCount: number;
+  pendingCount: number;
+  marketCap: number;
+  unitPriceSparkLinePath: string;
+  isVerified?: boolean;
+};
+
+type RuneApiResponse = {
+  runes: RuneApiItem[];
+};
+
 export default function Component() {
   const [sortBy, setSortBy] = useState<keyof RuneData>("market_cap")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
@@ -56,46 +97,45 @@ export default function Component() {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        setError(null)
-        // Simulating API call - replace with actual API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        // Mock data - replace with actual API response
-        const mockMarketStats: MarketStats = {
-          total_market_cap: "$1.23B",
-          total_volume_24h: "$423.5M",
-          runes_count: "1,245",
-          market_cap_change_24h: "+5.67%",
+        const response = await fetch('https://api-mainnet.magiceden.io/v2/ord/btc/runes/collection_stats/search?offset=0&limit=200&sort=totalVolume&direction=desc&window=1d&isVerified=false&filter=%7B%22allCollections%22:true%7D')
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const data: RuneApiResponse = await response.json()
+        
+        if (!data?.runes) {
+          throw new Error('Invalid API response structure')
         }
 
-        const mockRunesData: RuneData[] = [
-          {
-            id: 1,
-            name: "RUNE-20",
-            symbol: "RUNE",
-            price: 0.00234,
-            price_change_24h: 12.5,
-            market_cap: 1200000,
-            volume_24h: 450000,
-            supply: "21,000,000",
-          },
-          {
-            id: 2,
-            name: "RUNE-21",
-            symbol: "RUNE21",
-            price: 0.00567,
-            price_change_24h: -3.2,
-            market_cap: 980000,
-            volume_24h: 320000,
-            supply: "15,000,000",
-          },
-        ]
+        const transformedData: RuneData[] = data.runes.map(rune => ({
+          id: rune.etching.runeNumber,
+          name: rune.etching.runeName,
+          symbol: rune.etching.symbol,
+          price: rune.unitPriceSats,
+          price_change_24h: rune.unitPriceChange,
+          market_cap: rune.marketCap,
+          volume_24h: rune.vol,
+          supply: rune.etching.premine || rune.etching.amount || '0'
+        }))
 
-        setMarketStats(mockMarketStats)
-        setRunesData(mockRunesData)
-      } catch (err) {
-        console.error("Error fetching data:", err)
-        setError("Failed to fetch data. Please try again later.")
+        setRunesData(transformedData)
+        
+        // Calculate market stats
+        const totalMarketCap = transformedData.reduce((sum: number, rune: any) => sum + rune.market_cap, 0)
+        const totalVolume = transformedData.reduce((sum: number, rune: any) => sum + rune.volume_24h, 0)
+        
+        setMarketStats({
+          total_market_cap: `$${formatNumber(totalMarketCap)}`,
+          total_volume_24h: `$${formatNumber(totalVolume)}`,
+          runes_count: transformedData.length.toString(),
+          market_cap_change_24h: '0%',
+        })
+
+      } catch (error: any) {
+        console.error('Error fetching data:', error)
+        setError(error instanceof Error ? error.message : 'Failed to fetch data')
       } finally {
         setIsLoading(false)
       }
@@ -103,6 +143,20 @@ export default function Component() {
 
     fetchData()
   }, [])
+
+  // Helper function to calculate price change percentage
+  const calculatePriceChange = (current: number, previous: number): number => {
+    if (!previous) return 0
+    return ((current - previous) / previous) * 100
+  }
+
+  // Helper function to format large numbers
+  const formatNumber = (num: number): string => {
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B'
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M'
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K'
+    return num.toFixed(2)
+  }
 
   const handleSort = (column: keyof RuneData) => {
     setSortBy(column)
