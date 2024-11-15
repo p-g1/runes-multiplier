@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { ChevronDown, Search, Star } from "lucide-react"
+import { ChevronDown, Search } from "lucide-react"
 import { Button } from "./components/Button"
 import { Card, CardContent, CardHeader, CardTitle } from "./components/Card"
 import { Input } from "./components/Input"
@@ -19,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./components/Dropdown"
+import LoadingModal from "./components/LoadingModal"
 
 // Define types for our data structures
 type MarketStats = {
@@ -37,6 +38,10 @@ type RuneData = {
   market_cap: number;
   volume_24h: number;
   supply: string;
+  floor_price?: string;
+  available_2x?: number;
+  available_5x?: number;
+  available_10x?: number;
 }
 
 // Define the API response types to match the actual structure
@@ -80,6 +85,8 @@ type RuneApiResponse = {
   runes: RuneApiItem[];
 };
 
+const HIGH_CAP = 100000
+
 export default function Component() {
   const [sortBy, setSortBy] = useState<keyof RuneData>("market_cap")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
@@ -92,39 +99,57 @@ export default function Component() {
   const [runesData, setRunesData] = useState<RuneData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [btcPrice, setBtcPrice] = useState<number>(0)
+  const [loadingMessages, setLoadingMessages] = useState<string[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true)
+        setLoadingMessages(['Starting data fetch...'])
+        console.log('Set initial message')
+
+        await fetchBtcPrice()
+        setLoadingMessages(prev => {
+          console.log('Current messages:', prev)
+          return [...prev, `Fetched BTC Price: $${btcPrice}`]
+        })
+
         const response = await fetch('https://api-mainnet.magiceden.io/v2/ord/btc/runes/collection_stats/search?offset=0&limit=200&sort=totalVolume&direction=desc&window=1d&isVerified=false&filter=%7B%22allCollections%22:true%7D')
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
         
+        setLoadingMessages(prev => [...prev, 'Fetched runes data, processing...'])
+        console.log('Runes data fetched')
+
         const data: RuneApiResponse = await response.json()
         
         if (!data?.runes) {
           throw new Error('Invalid API response structure')
         }
 
-        const transformedData: RuneData[] = data.runes.map(rune => ({
-          id: rune.etching.runeNumber,
-          name: rune.etching.runeName,
-          symbol: rune.etching.symbol,
-          price: rune.unitPriceSats,
-          price_change_24h: rune.unitPriceChange,
-          market_cap: rune.marketCap,
-          volume_24h: rune.vol,
-          supply: rune.etching.premine || rune.etching.amount || '0'
-        }))
+        setLoadingMessages(prev => [...prev, `Processing ${data.runes.length} runes...`])
+
+        const transformedData: RuneData[] = data.runes
+          .filter(rune => rune.holderCount > 300 && rune.totalVol > 0.75)
+          .map(rune => ({
+            id: rune.etching.runeNumber,
+            name: rune.etching.runeName,
+            symbol: rune.etching.symbol,
+            price: rune.unitPriceSats,
+            price_change_24h: rune.unitPriceChange,
+            market_cap: rune.marketCap * btcPrice,
+            volume_24h: rune.vol,
+            supply: rune.etching.premine || rune.etching.amount || '0'
+          }))
 
         setRunesData(transformedData)
         
         // Calculate market stats
-        const totalMarketCap = transformedData.reduce((sum: number, rune: any) => sum + rune.market_cap, 0)
-        const totalVolume = transformedData.reduce((sum: number, rune: any) => sum + rune.volume_24h, 0)
+        const totalMarketCap = transformedData.reduce((sum, rune) => sum + rune.market_cap, 0)
+        const totalVolume = transformedData.reduce((sum, rune) => sum + rune.volume_24h, 0)
         
         setMarketStats({
           total_market_cap: `$${formatNumber(totalMarketCap)}`,
@@ -133,8 +158,11 @@ export default function Component() {
           market_cap_change_24h: '0%',
         })
 
+        await fetchOrdersInBatches(transformedData)
+
       } catch (error: any) {
         console.error('Error fetching data:', error)
+        setLoadingMessages(prev => [...prev, `Error occurred: ${error.message}`])
         setError(error instanceof Error ? error.message : 'Failed to fetch data')
       } finally {
         setIsLoading(false)
@@ -164,13 +192,98 @@ export default function Component() {
   }
 
   const sortedRunesData = [...runesData].sort((a, b) => {
-    if (a[sortBy] < b[sortBy]) return sortOrder === "asc" ? -1 : 1
-    if (a[sortBy] > b[sortBy]) return sortOrder === "asc" ? 1 : -1
+    const aValue = a[sortBy] ?? 0  // Use nullish coalescing to provide a default
+    const bValue = b[sortBy] ?? 0
+    
+    if (aValue < bValue) return sortOrder === "asc" ? -1 : 1
+    if (aValue > bValue) return sortOrder === "asc" ? 1 : -1
     return 0
   })
 
+  // Add this helper function with your other utility functions
+  const trimTrailingZeros = (num: number): string => {
+    return parseFloat(num.toString()).toString()
+  }
+
+  const fetchBtcPrice = async () => {
+    try {
+      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+      const data = await response.json()
+      setBtcPrice(data.bitcoin.usd)
+    } catch (error) {
+      console.error('Error fetching BTC price:', error)
+      setBtcPrice(71000) // Fallback price if API fails
+    }
+  }
+
+  const fetchOrdersInBatches = async (runes: RuneData[], batchSize: number = 20) => {
+    const updatedRunes = [...runes]
+    
+    for (let i = 0; i < runes.length; i += batchSize) {
+      const batch = runes.slice(i, i + batchSize)
+      
+      const promises = batch.map(rune => 
+        fetch(`https://api-mainnet.magiceden.io/v2/ord/btc/runes/orders/${rune.name.replace(/[^A-Za-z0-9]/g, '')}?offset=100&includePending=false&sort=unitPriceAsc&rbfPreventionListingOnly=false&side=sell`)
+          .then(async res => {
+            const data = await res.json()
+            setLoadingMessages(prev => [...prev, `Analyzing ${rune.name}...`])
+            return data
+          })
+          .catch(error => {
+            setLoadingMessages(prev => [...prev, `Error processing ${rune.name}: ${error}`])
+            return null
+          })
+      )
+
+      const results = await Promise.all(promises)
+      
+      results.forEach((result, index) => {
+        if (result?.orders?.length > 0) {
+          const floorPrice = parseFloat(result.orders[0].formattedUnitPrice)
+          setLoadingMessages(prev => [...prev, `Floor price for ${batch[index].name}: ${floorPrice} sats`])
+          
+          const available_2x = result.orders
+            .filter((order: any) => parseFloat(order.formattedUnitPrice) <= floorPrice * 2)
+            .reduce((sum: number, order: any) => {
+              const newSum = sum + parseFloat(order.formattedUnitPrice)
+              return newSum > HIGH_CAP ? HIGH_CAP : newSum
+            }, 0)
+            
+          const available_5x = result.orders
+            .filter((order: any) => parseFloat(order.formattedUnitPrice) <= floorPrice * 5)
+            .reduce((sum: number, order: any) => {
+              const newSum = sum + parseFloat(order.formattedUnitPrice)
+              return newSum > HIGH_CAP ? HIGH_CAP : newSum
+            }, 0)
+            
+          const available_10x = result.orders
+            .filter((order: any) => parseFloat(order.formattedUnitPrice) <= floorPrice * 10)
+            .reduce((sum: number, order: any) => {
+              const newSum = sum + parseFloat(order.formattedUnitPrice)
+              return newSum > HIGH_CAP ? HIGH_CAP : newSum
+            }, 0)
+
+          updatedRunes[i + index] = {
+            ...updatedRunes[i + index],
+            floor_price: result.orders[0].formattedUnitPrice,
+            available_2x,
+            available_5x,
+            available_10x
+          }
+        }
+      })
+
+      if (i + batchSize < runes.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+
+    setRunesData(updatedRunes)
+  }
+
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>
+    console.log('Rendering LoadingModal with messages:', loadingMessages)
+    return <LoadingModal messages={loadingMessages} />
   }
 
   if (error) {
@@ -266,19 +379,23 @@ export default function Component() {
             <TableHead className="text-right">Market Cap</TableHead>
             <TableHead className="text-right">Volume (24h)</TableHead>
             <TableHead className="text-right">Supply</TableHead>
+            <TableHead className="text-right">Floor Price</TableHead>
+            <TableHead className="text-right">2x</TableHead>
+            <TableHead className="text-right">5x</TableHead>
+            <TableHead className="text-right">10x</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedRunesData.map((rune) => (
             <TableRow key={rune.id}>
-              <TableCell>
-                <Button variant="default" size="icon" className="h-8 w-8">
-                  <Star className="h-4 w-4" />
-                </Button>
+              <TableCell className="text-center">
+                <div className="flex items-center justify-center text-xl">
+                  {rune.symbol}
+                </div>
               </TableCell>
               <TableCell className="font-medium">{rune.name}</TableCell>
               <TableCell className="text-right">
-                ${rune.price.toFixed(8)}
+                ${trimTrailingZeros(rune.price)}
               </TableCell>
               <TableCell
                 className={`text-right ${
@@ -297,6 +414,18 @@ export default function Component() {
                 ${rune.volume_24h.toLocaleString()}
               </TableCell>
               <TableCell className="text-right">{rune.supply}</TableCell>
+              <TableCell className="text-right">
+                {rune.floor_price ? `${trimTrailingZeros(parseFloat(rune.floor_price))} sats` : '-'}
+              </TableCell>
+              <TableCell className="text-right">
+                {rune.available_2x ? (rune.available_2x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_2x)) : '-'}
+              </TableCell>
+              <TableCell className="text-right">
+                {rune.available_5x ? (rune.available_5x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_5x)) : '-'}
+              </TableCell>
+              <TableCell className="text-right">
+                {rune.available_10x ? (rune.available_10x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_10x)) : '-'}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
