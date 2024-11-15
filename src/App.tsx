@@ -13,12 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "./components/Table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./components/Dropdown"
 import LoadingModal from "./components/LoadingModal"
 
 // Define types for our data structures
@@ -147,14 +141,17 @@ export default function Component() {
         setRunesData(transformedData)
         
         // Calculate market stats
-        const totalMarketCap = transformedData.reduce((sum, rune) => sum + rune.market_cap, 0)
-        const totalVolume = transformedData.reduce((sum, rune) => sum + rune.volume_24h, 0)
-        
+        const totalMarketCap = data.runes
+          .filter(rune => rune.holderCount > 300 && rune.totalVol > 0.75)
+          .reduce((sum, rune) => sum + (rune.marketCap * btcPrice), 0)
+
+        const totalVolume = transformedData.reduce((sum, rune) => sum + (rune.volume_24h * btcPrice), 0)
+
         setMarketStats({
-          total_market_cap: `$${formatNumber(totalMarketCap)}`,
-          total_volume_24h: `$${formatNumber(totalVolume)}`,
+          total_market_cap: `$${totalMarketCap.toLocaleString()}`,
+          total_volume_24h: `$${totalVolume.toLocaleString()}`,
           runes_count: transformedData.length.toString(),
-          market_cap_change_24h: '0%',
+          market_cap_change_24h: '0%'
         })
 
         await fetchOrdersInBatches(transformedData)
@@ -289,6 +286,23 @@ export default function Component() {
     setRunesData(updatedRunes)
   }
 
+  // Add this helper function with your other utility functions
+  const formatLargeNumber = (num: number): string => {
+    if (num >= 1_000_000_000_000) {
+      return `$${(num / 1_000_000_000_000).toFixed(2)}T`
+    }
+    if (num >= 1_000_000_000) {
+      return `$${(num / 1_000_000_000).toFixed(2)}B`
+    }
+    if (num >= 1_000_000) {
+      return `$${(num / 1_000_000).toFixed(2)}M`
+    }
+    if (num >= 1_000) {
+      return `$${(num / 1_000).toFixed(2)}K`
+    }
+    return `$${num.toFixed(2)}`
+  }
+
   if (isLoading) {
     console.log('Rendering LoadingModal with messages:', loadingMessages)
     return <LoadingModal messages={loadingMessages} />
@@ -342,28 +356,7 @@ export default function Component() {
       </div>
 
       {/* Filters and Search */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-[200px] justify-between bg-black border-green-500 text-green-500 hover:bg-green-500/10">
-                Sort by: {sortBy.replace("_", " ")}
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-black border-green-500">
-              <DropdownMenuItem className="text-green-500 hover:bg-green-500/10" onClick={() => handleSort("market_cap")}>
-                Market Cap
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-green-500 hover:bg-green-500/10" onClick={() => handleSort("volume_24h")}>
-                Volume
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-green-500 hover:bg-green-500/10" onClick={() => handleSort("price_change_24h")}>
-                Price Change
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      <div className="flex items-center justify-end">
         <div className="flex w-full max-w-sm items-center space-x-2">
           <Input
             placeholder="Search runes..."
@@ -380,15 +373,15 @@ export default function Component() {
       <Table className="border border-green-500/20 [&_.divide-gray-200]:divide-green-500/20 [&_.divide-gray-200]:divide-opacity-20">
         <TableHeader>
           <TableRow className="border-b border-green-500/20">
-            <TableHead className="text-green-300 bg-[#001200]"></TableHead>
-            <TableHead className="text-green-300 bg-[#001200]">Name</TableHead>
-            <TableHead className="text-right text-green-300 bg-[#001200]">24h %</TableHead>
-            <TableHead className="text-right text-green-300 bg-[#001200]">Market Cap</TableHead>
-            <TableHead className="text-right text-green-300 bg-[#001200]">Volume (24h)</TableHead>
-            <TableHead className="text-right text-green-300 bg-[#001200]">Floor Price</TableHead>
-            <TableHead className="text-right text-green-300 bg-[#001200]">2x</TableHead>
-            <TableHead className="text-right text-green-300 bg-[#001200]">5x</TableHead>
-            <TableHead className="text-right text-green-300 bg-[#001200]">10x</TableHead>
+            <TableHead className="text-green-300 bg-[#001200] w-12"></TableHead>
+            <TableHead className="text-green-300 bg-[#001200] w-32">Name</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200] w-24">24h %</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200] w-32">Market Cap</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200] w-32">Volume (24h)</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200] w-32">Floor Price</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200] w-32">2x</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200] w-32">5x</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200] w-32">10x</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -414,7 +407,7 @@ export default function Component() {
                 {rune.price_change_24h.toFixed(2)}%
               </TableCell>
               <TableCell className="text-right font-mono bg-black group-hover:bg-[#001200]">
-                ${rune.market_cap.toLocaleString()}
+                {formatLargeNumber(rune.market_cap)}
               </TableCell>
               <TableCell className="text-right font-mono bg-black group-hover:bg-[#001200]">
                 ${(rune.volume_24h * btcPrice).toLocaleString()}
