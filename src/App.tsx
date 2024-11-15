@@ -382,7 +382,6 @@ export default function Component() {
           <TableRow className="border-b border-green-500/20">
             <TableHead className="text-green-300 bg-[#001200]"></TableHead>
             <TableHead className="text-green-300 bg-[#001200]">Name</TableHead>
-            <TableHead className="text-right text-green-300 bg-[#001200]">Price</TableHead>
             <TableHead className="text-right text-green-300 bg-[#001200]">24h %</TableHead>
             <TableHead className="text-right text-green-300 bg-[#001200]">Market Cap</TableHead>
             <TableHead className="text-right text-green-300 bg-[#001200]">Volume (24h)</TableHead>
@@ -396,19 +395,16 @@ export default function Component() {
           {sortedRunesData.map((rune) => (
             <TableRow 
               key={rune.id} 
-              className="border-b border-green-500/20 hover:bg-green-500/5"
+              className="border-b border-green-500/20 group"
             >
-              <TableCell className="text-center font-mono bg-black">
+              <TableCell className="text-center font-mono bg-black group-hover:bg-[#001200]">
                 <div className="flex items-center justify-center text-xl">
                   {rune.symbol}
                 </div>
               </TableCell>
-              <TableCell className="font-medium font-mono bg-black">{rune.name}</TableCell>
-              <TableCell className="text-right font-mono bg-black">
-                ${trimTrailingZeros(rune.price)}
-              </TableCell>
+              <TableCell className="font-medium font-mono bg-black group-hover:bg-[#001200]">{rune.name}</TableCell>
               <TableCell
-                className={`text-right font-mono bg-black ${
+                className={`text-right font-mono bg-black group-hover:bg-[#001200] ${
                   rune.price_change_24h > 0
                     ? "text-emerald-500"
                     : "text-red-500"
@@ -417,30 +413,32 @@ export default function Component() {
                 {rune.price_change_24h > 0 ? "+" : ""}
                 {rune.price_change_24h.toFixed(2)}%
               </TableCell>
-              <TableCell className="text-right font-mono bg-black">
+              <TableCell className="text-right font-mono bg-black group-hover:bg-[#001200]">
                 ${rune.market_cap.toLocaleString()}
               </TableCell>
-              <TableCell className="text-right font-mono bg-black">
-                ${rune.volume_24h.toLocaleString()}
+              <TableCell className="text-right font-mono bg-black group-hover:bg-[#001200]">
+                ${(rune.volume_24h * btcPrice).toLocaleString()}
               </TableCell>
-              <TableCell className="text-right font-mono bg-black">
-                {rune.floor_price ? `${trimTrailingZeros(parseFloat(rune.floor_price))} sats` : '-'}
+              <TableCell className="text-right font-mono bg-black group-hover:bg-[#001200]">
+                {rune.floor_price 
+                  ? `$${((parseFloat(rune.floor_price) * btcPrice) / 100000000).toFixed(4)}` 
+                  : '-'}
               </TableCell>
-              <TableCell className="text-right font-mono bg-black">
+              <TableCell className="text-right font-mono bg-black group-hover:bg-[#001200]">
                 {rune.available_2x 
                   ? (rune.available_2x >= HIGH_CAP 
                     ? 'high' 
                     : Math.ceil(rune.available_2x * 100) / 100) 
                   : '-'}
               </TableCell>
-              <TableCell className="text-right font-mono bg-black">
+              <TableCell className="text-right font-mono bg-black group-hover:bg-[#001200]">
                 {rune.available_5x 
                   ? (rune.available_5x >= HIGH_CAP 
                     ? 'high' 
                     : Math.ceil(rune.available_5x * 100) / 100) 
                   : '-'}
               </TableCell>
-              <TableCell className="text-right font-mono bg-black">
+              <TableCell className="text-right font-mono bg-black group-hover:bg-[#001200]">
                 {rune.available_10x 
                   ? (rune.available_10x >= HIGH_CAP 
                     ? 'high' 
