@@ -427,13 +427,25 @@ export default function Component() {
                 {rune.floor_price ? `${trimTrailingZeros(parseFloat(rune.floor_price))} sats` : '-'}
               </TableCell>
               <TableCell className="text-right font-mono bg-black">
-                {rune.available_2x ? (rune.available_2x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_2x)) : '-'}
+                {rune.available_2x 
+                  ? (rune.available_2x >= HIGH_CAP 
+                    ? 'high' 
+                    : Math.ceil(rune.available_2x * 100) / 100) 
+                  : '-'}
               </TableCell>
               <TableCell className="text-right font-mono bg-black">
-                {rune.available_5x ? (rune.available_5x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_5x)) : '-'}
+                {rune.available_5x 
+                  ? (rune.available_5x >= HIGH_CAP 
+                    ? 'high' 
+                    : Math.ceil(rune.available_5x * 100) / 100) 
+                  : '-'}
               </TableCell>
               <TableCell className="text-right font-mono bg-black">
-                {rune.available_10x ? (rune.available_10x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_10x)) : '-'}
+                {rune.available_10x 
+                  ? (rune.available_10x >= HIGH_CAP 
+                    ? 'high' 
+                    : Math.ceil(rune.available_10x * 100) / 100) 
+                  : '-'}
               </TableCell>
             </TableRow>
           ))}
