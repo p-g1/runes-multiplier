@@ -609,6 +609,10 @@ video {
   max-height: 80vh;
 }
 
+.min-h-screen {
+  min-height: 100vh;
+}
+
 .w-4 {
   width: 1rem;
 }
@@ -719,6 +723,10 @@ video {
   border-color: rgb(229 231 235 / var(--tw-divide-opacity));
 }
 
+.divide-green-500\/20 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(34 197 94 / 0.2);
+}
+
 .overflow-hidden {
   overflow: hidden;
 }
@@ -766,6 +774,18 @@ video {
   border-color: rgb(34 197 94 / var(--tw-border-opacity));
 }
 
+.border-green-500\/30 {
+  border-color: rgb(34 197 94 / 0.3);
+}
+
+.border-green-500\/50 {
+  border-color: rgb(34 197 94 / 0.5);
+}
+
+.border-green-500\/20 {
+  border-color: rgb(34 197 94 / 0.2);
+}
+
 .bg-gray-50 {
   --tw-bg-opacity: 1;
   background-color: rgb(249 250 251 / var(--tw-bg-opacity));
@@ -789,6 +809,27 @@ video {
 .bg-black {
   --tw-bg-opacity: 1;
   background-color: rgb(0 0 0 / var(--tw-bg-opacity));
+}
+
+.bg-green-500\/10 {
+  background-color: rgb(34 197 94 / 0.1);
+}
+
+.bg-black\/30 {
+  background-color: rgb(0 0 0 / 0.3);
+}
+
+.bg-black\/50 {
+  background-color: rgb(0 0 0 / 0.5);
+}
+
+.bg-green-950\/30 {
+  background-color: rgb(5 46 22 / 0.3);
+}
+
+.bg-\[\#001200\] {
+  --tw-bg-opacity: 1;
+  background-color: rgb(0 18 0 / var(--tw-bg-opacity));
 }
 
 .bg-opacity-90 {
@@ -971,6 +1012,11 @@ video {
   color: rgb(34 197 94 / var(--tw-text-opacity));
 }
 
+.text-green-700 {
+  --tw-text-opacity: 1;
+  color: rgb(21 128 61 / var(--tw-text-opacity));
+}
+
 .shadow {
   --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
@@ -1008,6 +1054,10 @@ video {
   transition-duration: 150ms;
 }
 
+.duration-200 {
+  transition-duration: 200ms;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
@@ -1020,6 +1070,16 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+.placeholder\:text-green-700::placeholder {
+  --tw-text-opacity: 1;
+  color: rgb(21 128 61 / var(--tw-text-opacity));
+}
+
+.hover\:border-green-500:hover {
+  --tw-border-opacity: 1;
+  border-color: rgb(34 197 94 / var(--tw-border-opacity));
 }
 
 .hover\:bg-gray-50:hover {
@@ -1035,6 +1095,18 @@ code {
 .hover\:bg-indigo-700:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(67 56 202 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-green-500\/10:hover {
+  background-color: rgb(34 197 94 / 0.1);
+}
+
+.hover\:bg-green-500\/20:hover {
+  background-color: rgb(34 197 94 / 0.2);
+}
+
+.hover\:bg-green-500\/5:hover {
+  background-color: rgb(34 197 94 / 0.05);
 }
 
 .focus\:border-indigo-500:focus {
@@ -1100,4 +1172,16 @@ code {
   .md\:grid-cols-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+.\[\&_\.divide-gray-200\]\:divide-green-500\/20 .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(34 197 94 / 0.2);
+}
+
+.\[\&_\.divide-gray-200\]\:divide-opacity-20 .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  --tw-divide-opacity: 0.2;
+}
+
+.\[\&_tr\]\:divide-green-500\/20 tr > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(34 197 94 / 0.2);
 }

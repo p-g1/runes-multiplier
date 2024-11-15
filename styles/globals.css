@@ -50,3 +50,9 @@
   white-space: nowrap;
   overflow: hidden;
 }
+
+/* Override card divider colors */
+.divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  --tw-divide-opacity: 0.2;
+  border-color: rgb(34 197 94 / var(--tw-divide-opacity));
+}

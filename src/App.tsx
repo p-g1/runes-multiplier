@@ -37,7 +37,6 @@ type RuneData = {
   price_change_24h: number;
   market_cap: number;
   volume_24h: number;
-  supply: string;
   floor_price?: string;
   available_2x?: number;
   available_5x?: number;
@@ -142,7 +141,7 @@ export default function Component() {
             price_change_24h: rune.unitPriceChange,
             market_cap: rune.marketCap * btcPrice,
             volume_24h: rune.vol,
-            supply: rune.etching.premine || rune.etching.amount || '0'
+            floor_price: rune.etching.premine || rune.etching.amount || '0'
           }))
 
         setRunesData(transformedData)
@@ -230,8 +229,8 @@ export default function Component() {
             return data
           })
           .catch(error => {
-            setLoadingMessages(prev => [...prev, `Error processing ${rune.name}: ${error}`])
-            return null
+            setLoadingMessages(prev => [...prev, `No orders found for ${rune.name}`])
+            return { orders: [] } // Return empty orders instead of null
           })
       )
 
@@ -270,6 +269,15 @@ export default function Component() {
             available_5x,
             available_10x
           }
+        } else {
+          setLoadingMessages(prev => [...prev, `No active orders for ${batch[index].name}`])
+          updatedRunes[i + index] = {
+            ...updatedRunes[i + index],
+            floor_price: undefined,
+            available_2x: undefined,
+            available_5x: undefined,
+            available_10x: undefined
+          }
         }
       })
 
@@ -291,42 +299,42 @@ export default function Component() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-6 bg-black min-h-screen text-green-500">
       {/* Market Overview Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Market Cap</CardTitle>
+        <Card className="bg-black border border-green-500/50 hover:border-green-500 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-green-500/20">
+            <CardTitle className="text-sm font-medium text-green-300">Total Market Cap</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{marketStats.total_market_cap}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold font-mono">{marketStats.total_market_cap}</div>
+            <p className="text-xs text-green-700">
               {marketStats.market_cap_change_24h}
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">24h Volume</CardTitle>
+        <Card className="bg-black border border-green-500/50 hover:border-green-500 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-green-500/20">
+            <CardTitle className="text-sm font-medium text-green-300">24h Volume</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{marketStats.total_volume_24h}</div>
+            <div className="text-2xl font-bold font-mono">{marketStats.total_volume_24h}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Runes</CardTitle>
+        <Card className="bg-black border border-green-500/50 hover:border-green-500 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-green-500/20">
+            <CardTitle className="text-sm font-medium text-green-300">Active Runes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{marketStats.runes_count}</div>
+            <div className="text-2xl font-bold font-mono">{marketStats.runes_count}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">24h Change</CardTitle>
+        <Card className="bg-black border border-green-500/50 hover:border-green-500 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b border-green-500/20">
+            <CardTitle className="text-sm font-medium text-green-300">24h Change</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-500">
+            <div className="text-2xl font-bold font-mono text-emerald-500">
               {marketStats.market_cap_change_24h}
             </div>
           </CardContent>
@@ -338,19 +346,19 @@ export default function Component() {
         <div className="flex items-center space-x-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-[200px] justify-between">
+              <Button variant="outline" className="w-[200px] justify-between bg-black border-green-500 text-green-500 hover:bg-green-500/10">
                 Sort by: {sortBy.replace("_", " ")}
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleSort("market_cap")}>
+            <DropdownMenuContent className="bg-black border-green-500">
+              <DropdownMenuItem className="text-green-500 hover:bg-green-500/10" onClick={() => handleSort("market_cap")}>
                 Market Cap
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort("volume_24h")}>
+              <DropdownMenuItem className="text-green-500 hover:bg-green-500/10" onClick={() => handleSort("volume_24h")}>
                 Volume
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort("price_change_24h")}>
+              <DropdownMenuItem className="text-green-500 hover:bg-green-500/10" onClick={() => handleSort("price_change_24h")}>
                 Price Change
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -359,46 +367,48 @@ export default function Component() {
         <div className="flex w-full max-w-sm items-center space-x-2">
           <Input
             placeholder="Search runes..."
-            className="w-[300px]"
+            className="w-[300px] bg-black border-green-500 text-green-500 placeholder:text-green-700"
             type="search"
           />
-          <Button variant="secondary">
+          <Button variant="secondary" className="bg-green-500/10 hover:bg-green-500/20 text-green-500">
             <Search className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Runes Table */}
-      <Table>
+      <Table className="border border-green-500/20 [&_.divide-gray-200]:divide-green-500/20 [&_.divide-gray-200]:divide-opacity-20">
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-[40px]"></TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead className="text-right">Price</TableHead>
-            <TableHead className="text-right">24h %</TableHead>
-            <TableHead className="text-right">Market Cap</TableHead>
-            <TableHead className="text-right">Volume (24h)</TableHead>
-            <TableHead className="text-right">Supply</TableHead>
-            <TableHead className="text-right">Floor Price</TableHead>
-            <TableHead className="text-right">2x</TableHead>
-            <TableHead className="text-right">5x</TableHead>
-            <TableHead className="text-right">10x</TableHead>
+          <TableRow className="border-b border-green-500/20">
+            <TableHead className="text-green-300 bg-[#001200]"></TableHead>
+            <TableHead className="text-green-300 bg-[#001200]">Name</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200]">Price</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200]">24h %</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200]">Market Cap</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200]">Volume (24h)</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200]">Floor Price</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200]">2x</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200]">5x</TableHead>
+            <TableHead className="text-right text-green-300 bg-[#001200]">10x</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedRunesData.map((rune) => (
-            <TableRow key={rune.id}>
-              <TableCell className="text-center">
+            <TableRow 
+              key={rune.id} 
+              className="border-b border-green-500/20 hover:bg-green-500/5"
+            >
+              <TableCell className="text-center font-mono bg-black">
                 <div className="flex items-center justify-center text-xl">
                   {rune.symbol}
                 </div>
               </TableCell>
-              <TableCell className="font-medium">{rune.name}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="font-medium font-mono bg-black">{rune.name}</TableCell>
+              <TableCell className="text-right font-mono bg-black">
                 ${trimTrailingZeros(rune.price)}
               </TableCell>
               <TableCell
-                className={`text-right ${
+                className={`text-right font-mono bg-black ${
                   rune.price_change_24h > 0
                     ? "text-emerald-500"
                     : "text-red-500"
@@ -407,23 +417,22 @@ export default function Component() {
                 {rune.price_change_24h > 0 ? "+" : ""}
                 {rune.price_change_24h.toFixed(2)}%
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right font-mono bg-black">
                 ${rune.market_cap.toLocaleString()}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right font-mono bg-black">
                 ${rune.volume_24h.toLocaleString()}
               </TableCell>
-              <TableCell className="text-right">{rune.supply}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right font-mono bg-black">
                 {rune.floor_price ? `${trimTrailingZeros(parseFloat(rune.floor_price))} sats` : '-'}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right font-mono bg-black">
                 {rune.available_2x ? (rune.available_2x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_2x)) : '-'}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right font-mono bg-black">
                 {rune.available_5x ? (rune.available_5x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_5x)) : '-'}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right font-mono bg-black">
                 {rune.available_10x ? (rune.available_10x >= HIGH_CAP ? 'high' : trimTrailingZeros(rune.available_10x)) : '-'}
               </TableCell>
             </TableRow>
